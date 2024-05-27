@@ -2,9 +2,14 @@
 #include <Keypad.h>
 #include <Servo.h>
 #include <DS1302.h>
+#include <Wire.h> 
+#include <LiquidCrystal_I2C.h>
 #define CLK_PIN 9
 #define DATA_PIN 10
 #define RST_PIN 11
+
+// Set the LCD address to 0x27 for a 16 chars and 2 line display
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 DS1302 rtc(RST_PIN, DATA_PIN, CLK_PIN);
 Time t;
@@ -58,6 +63,7 @@ void setup(){
   pinMode(led, OUTPUT);
   rtc.halt(false);
   rtc.writeProtect(false);
+  lcd.begin();
 }
 
 void loop(){
@@ -81,9 +87,9 @@ void loop(){
         isPasswordSet = false;
       }
 	}
-  changePassword();
+  //changePassword();
   
-  //InputPassword();
+  inputPassword();
 
 }
 
@@ -148,7 +154,12 @@ void inputPassword(){
   int i = 0;
 	while(1){
     char key = keypad.getKey();
-    if (key != NO_KEY){ 
+    if (key != NO_KEY){
+		  Serial.println(key);
+      if(key != '*'){
+        lcd.setCursor(i, 0); 
+        lcd.print(key);
+      } 
       if(key - '0' == password[i]){
         Serial.println("냠");
         isSafe++;
@@ -161,6 +172,8 @@ void inputPassword(){
   }
   if(isSafe == 3){
 	  Serial.println("맞는 비밀번호 입니다");
+    lcd.setCursor(0, 1); 
+	  lcd.print("correct password");
     servo.write(45);
     for (int i = 0; i < numTones; i++){
       tone(speakerPin, tones[i]);
@@ -168,9 +181,13 @@ void inputPassword(){
     }
     noTone(speakerPin);
     isSafe = 0;
+    delay(3000);
+    lcd.clear();    
   }
 	else{
 	  Serial.println("틀린 비밀번호 입니다");
+	  lcd.setCursor(0, 1); 
+	  lcd.print("wrong password");
     for(int i = 0; i < 5; i++){
       digitalWrite(speakerPin, HIGH);
       digitalWrite(led, HIGH);
@@ -180,6 +197,7 @@ void inputPassword(){
       delay(500);
     }
     isSafe = 0;
+    lcd.clear();
 	}
 }
 
