@@ -7,6 +7,8 @@
 #define CLK_PIN 9
 #define DATA_PIN 10
 #define RST_PIN 11
+#define trigPin 13
+#define echoPin 12
 
 // Set the LCD address to 0x27 for a 16 chars and 2 line display
 LiquidCrystal_I2C lcd(0x27, 16, 2);
