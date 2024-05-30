@@ -10,6 +10,8 @@
 #define trigPin 13
 #define echoPin 12
 
+bool isClose15 = false;
+
 // Set the LCD address to 0x27 for a 16 chars and 2 line display
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
@@ -70,6 +72,8 @@ void setup(){
   rtc.writeProtect(false);
   lcd.begin();
   pinMode(incline, INPUT);
+  pinMode(trigPin, OUTPUT); 
+  pinMode(echoPin, INPUT);  
 }
 
 void loop(){
@@ -78,10 +82,11 @@ void loop(){
     pre = cnt;
     checkOpen();
     checkIncline();
+    checkCome();
   }
   
   //Serial.println(pCount);
-  /* for (int i = 0; i < 3; i++) {
+/*   for (int i = 0; i < 3; i++) {
     Serial.println(password[i]);
   } */
   if(password[0] ==0 && password[1] == 0 && password[2] == 0){
@@ -233,7 +238,7 @@ void checkOpen(){
 }
 
 void checkIncline(){
-  Serial.println(digitalRead(incline));
+  //Serial.println(digitalRead(incline));
   if(digitalRead(incline) == LOW && !isIncline ){
     Serial.println("누군가 금고를 옮기고 있습니다");
     isIncline = true;
@@ -242,4 +247,30 @@ void checkIncline(){
     isIncline = false;
   }
   delay(100);
+}
+
+long microsecondsToCentimeters(long microseconds)
+{
+    return microseconds / 29 / 2;
+}
+
+void checkCome(){
+	long duration, cm;
+
+	digitalWrite(trigPin, LOW);
+	delayMicroseconds(2); 
+	digitalWrite(trigPin, HIGH);
+	delayMicroseconds(10); 
+	digitalWrite(trigPin, LOW);
+	duration = pulseIn(echoPin, HIGH); 
+	
+	cm = microsecondsToCentimeters(duration);
+
+  if (cm <= 15 && !isClose15) {
+		Serial.println("누군가 금고에 접근했습니다");
+    isClose15 = true;
+  } else if (cm > 15  && isClose15) {
+    isClose15 = false;
+  }
+	delay(100);   
 }
