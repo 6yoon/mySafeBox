@@ -83,6 +83,7 @@ void loop(){
     checkOpen();
     checkIncline();
     checkCome();
+    changePassword();
   }
   
   //Serial.println(pCount);
@@ -99,9 +100,12 @@ void loop(){
         isPasswordSet = false;
       }
 	}
-  //changePassword();
-  //inputPassword();
-
+  char key = keypad.getKey();
+  if(key != NO_KEY){
+    if(key == '#'){
+      inputPassword();
+    }
+  }
 }
 
 void setPassword(){
@@ -135,6 +139,7 @@ void loadPassword() {
 
 void changePassword(){
   if(pCount == 3) pCount -= 1;
+  //Serial.println(pCount);
 	while (1) {
 	  if (Serial.available()) {
 	    int rNum = Serial.parseInt();
@@ -193,7 +198,7 @@ void inputPassword(){
     noTone(speakerPin);
     isSafe = 0;
     delay(3000);
-    lcd.clear();    
+    lcd.clear();
   }
 	else{
 	  Serial.println("틀린 비밀번호 입니다");
