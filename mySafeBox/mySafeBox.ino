@@ -4,11 +4,14 @@
 #include <DS1302.h>
 #include <Wire.h> 
 #include <LiquidCrystal_I2C.h>
+#include <SoftwareSerial.h>
 #define CLK_PIN 9
 #define DATA_PIN 10
 #define RST_PIN 11
 #define trigPin 13
 #define echoPin 12
+
+SoftwareSerial mySerial(0, 1);
 
 bool isClose15 = false;
 
@@ -17,7 +20,7 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 DS1302 rtc(RST_PIN, DATA_PIN, CLK_PIN);
 Time t;
-int lightPin =A0;
+int lightPin = A0;
 bool isLightAbove50 = false;
 long pre = 0;
 long interval = 1000;
@@ -25,7 +28,7 @@ long interval = 1000;
 int motor_control = A1;
 Servo servo;
 
-int incline = 0;
+int incline = 2;
 bool isIncline = false;
 
 int speakerPin = A2;
@@ -57,10 +60,11 @@ void setup(){
     EEPROM.write(i, 0); // 전체 초기화
   } */
   
-  //rtc.setDOW(THURSDAY);
-  //rtc.setTime(21,58,00);
-  //rtc.setDate(26,5,2024);   // //날짜 수정한 후 주석 처리하고 한 번 더 업로드
+  //rtc.setDOW(WEDNESDAY);
+  //rtc.setTime(11,54,00);
+  //rtc.setDate(12,6,2024);   // //날짜 수정한 후 주석 처리하고 한 번 더 업로드
   
+  mySerial.begin(9600);
   Serial.begin(9600);
   loadPassword();
   pCount = EEPROM.read(0);
@@ -77,30 +81,40 @@ void setup(){
 }
 
 void loop(){
+  //Serial.println(pCount);
+  /* for (int i = 0; i < 3; i++) {
+    Serial.println(password[i]);
+  } */
+  
+  char key = keypad.getKey();
+
   unsigned long cnt = millis();
   if(cnt - pre >= interval) {
     pre = cnt;
     checkOpen();
     checkIncline();
     checkCome();
-    changePassword();
   }
-  
-  //Serial.println(pCount);
-/*   for (int i = 0; i < 3; i++) {
-    Serial.println(password[i]);
-  } */
+
+    if(key != NO_KEY){
+    if(key == '*'){
+      lcd.setCursor(0, 0); 
+      lcd.print(key);
+      changePassword();
+    }
+  }
+
   if(password[0] ==0 && password[1] == 0 && password[2] == 0){
-      if (!isPasswordSet) {
-        setPassword();
-        savePassword();
-        isPasswordSet = true;
-      }
-      else {
-        isPasswordSet = false;
-      }
+    if (!isPasswordSet) {
+      setPassword();
+      savePassword();
+      isPasswordSet = true;
+    }
+    else {
+      isPasswordSet = false;
+    }
 	}
-  char key = keypad.getKey();
+
   if(key != NO_KEY){
     if(key == '#'){
       inputPassword();
@@ -112,6 +126,7 @@ void setPassword(){
   Serial.println("설정할 비밀번호를 한 자리씩 입력하시오");
   while (1) {
     if (Serial.available()) {
+      //Serial.println(pCount);
       int pNum = Serial.parseInt();
       Serial.println(pNum);
       password[pCount] = pNum;
@@ -138,28 +153,29 @@ void loadPassword() {
 }
 
 void changePassword(){
-  if(pCount == 3) pCount -= 1;
-  //Serial.println(pCount);
-	while (1) {
-	  if (Serial.available()) {
-	    int rNum = Serial.parseInt();
-	    Serial.println(rNum);
-		  if(rNum == password[pCount]){
-		    changeCount++;
-        pCount--;
-      }
-	    if (changeCount == 3) {
-        pCount++;
-        Serial.println( "비밀번호 재설정을 시작합니다\n");
-        for (int i = 0; i < 3; i++) {
-          password[i] = 0;
+      if(pCount == 3) pCount -= 1;
+      //Serial.println(pCount);
+      while (1) {
+	    if (Serial.available()) {
+	      int rNum = Serial.parseInt();
+	      //Serial.println(rNum);
+		    if(rNum == password[pCount]){
+		      changeCount++;
+          pCount--;
         }
-        savePassword();
-        updatePCount(pCount);
-        break;
-	    }
-	  }else break;
-  }
+	      if (changeCount == 3) {
+          pCount++;
+          Serial.println( "비밀번호 재설정을 시작합니다\n");
+          for (int i = 0; i < 3; i++) {
+            password[i] = 0;
+          }
+          savePassword();
+          updatePCount(pCount);
+          break;
+	      }
+      }
+    }
+    lcd.clear();
 }
 
 void updatePCount(int newPCount) {
@@ -171,23 +187,22 @@ void inputPassword(){
 	while(1){
     char key = keypad.getKey();
     if (key != NO_KEY){
-		  Serial.println(key);
+		  //Serial.println(key);
       if(key != '*'){
         lcd.setCursor(i, 0); 
         lcd.print(key);
       } 
       if(key - '0' == password[i]){
-        Serial.println("냠");
+        //Serial.println("냠");
         isSafe++;
       }
       i++;
-      Serial.println(i);
-      Serial.println(isSafe);
+      //Serial.println(i);
+      //Serial.println(isSafe);
       if(i == 4 && key == '*') break;
     }
   }
   if(isSafe == 3){
-	  Serial.println("맞는 비밀번호 입니다");
     lcd.setCursor(0, 1); 
 	  lcd.print("correct password");
     servo.write(45);
@@ -201,7 +216,6 @@ void inputPassword(){
     lcd.clear();
   }
 	else{
-	  Serial.println("틀린 비밀번호 입니다");
 	  lcd.setCursor(0, 1); 
 	  lcd.print("wrong password");
     for(int i = 0; i < 5; i++){
@@ -223,7 +237,7 @@ void checkOpen(){
 
   //Serial.println(analogRead(lightPin)/10);
 
-  if (lightValue > 50 && !isLightAbove50) {
+  if (lightValue > 25 && !isLightAbove50) {
     Serial.print(t.year);
     Serial.print("년 ");
     Serial.print(t.mon);
@@ -235,8 +249,8 @@ void checkOpen(){
     Serial.print(t.min);
     //Serial.print(t.sec);
     Serial.print("분 금고가 열렸습니다.\n");
-    isLightAbove50 = true; // 50을 초과했다는 것을 기록
-  } else if (lightValue <= 50 && isLightAbove50) {
+    isLightAbove50 = true;
+  } else if (lightValue <= 2 && isLightAbove50) {
       servo.write(160);
       isLightAbove50 = false;
   }
@@ -245,7 +259,7 @@ void checkOpen(){
 void checkIncline(){
   //Serial.println(digitalRead(incline));
   if(digitalRead(incline) == LOW && !isIncline ){
-    Serial.println("누군가 금고를 옮기고 있습니다");
+    mySerial.println("누군가 금고를 옮기고 있습니다");
     isIncline = true;
   }
   else if(digitalRead(incline) == HIGH && isIncline){
